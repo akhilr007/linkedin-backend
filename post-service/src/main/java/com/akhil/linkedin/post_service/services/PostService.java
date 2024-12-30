@@ -6,4 +6,6 @@ import com.akhil.linkedin.post_service.dtos.responses.PostResponseDTO;
 public interface PostService {
 
     PostResponseDTO createPost(PostRequestDTO postRequestDTO, Long userId);
+
+    PostResponseDTO getPostById(Long postId);
 }

@@ -8,10 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -29,6 +26,16 @@ public class PostController {
         PostResponseDTO responseDTO = postService.createPost(postRequestDTO, 1L);
 
         log.info("Post created successfully with ID: {}", responseDTO.getId());
+        return ResponseEntity.ok(responseDTO);
+    }
+
+    @GetMapping("/{postId}")
+    ResponseEntity<PostResponseDTO> getPost(@PathVariable Long postId) {
+
+        log.info("Received request to get post with ID: {}", postId);
+        PostResponseDTO responseDTO = postService.getPostById(postId);
+
+        log.info("Returning post with ID: {}", postId);
         return ResponseEntity.ok(responseDTO);
     }
 }

@@ -3,6 +3,7 @@ package com.akhil.linkedin.post_service.services.impl;
 import com.akhil.linkedin.post_service.dtos.requests.PostRequestDTO;
 import com.akhil.linkedin.post_service.dtos.responses.PostResponseDTO;
 import com.akhil.linkedin.post_service.entitiies.Post;
+import com.akhil.linkedin.post_service.exceptions.ResourceNotFoundException;
 import com.akhil.linkedin.post_service.repositories.PostRepository;
 import com.akhil.linkedin.post_service.services.PostService;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,21 @@ public class PostServiceImpl implements PostService {
 
         PostResponseDTO responseDTO = modelMapper.map(savedPost, PostResponseDTO.class);
         log.debug("Mapped saved Post entity to PostResponseDTO: {}", responseDTO);
+
+        log.info("Returning response DTO with ID: {}", responseDTO.getId());
+        return responseDTO;
+    }
+
+    @Override
+    public PostResponseDTO getPostById(Long postId) {
+        log.info("Starting to get post with ID: {}", postId);
+
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found with ID: " + postId));
+        log.debug("Found post: {}", post);
+
+        PostResponseDTO responseDTO = modelMapper.map(post, PostResponseDTO.class);
+        log.debug("Mapped Post entity to PostResponseDTO: {}", responseDTO);
 
         log.info("Returning response DTO with ID: {}", responseDTO.getId());
         return responseDTO;
