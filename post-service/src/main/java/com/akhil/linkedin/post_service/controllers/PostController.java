@@ -4,6 +4,7 @@ import com.akhil.linkedin.post_service.dtos.requests.PostRequestDTO;
 import com.akhil.linkedin.post_service.dtos.responses.PostResponseDTO;
 import com.akhil.linkedin.post_service.services.PostService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +22,7 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping
-    ResponseEntity<PostResponseDTO> createPost(@RequestBody PostRequestDTO postRequestDTO,
+    ResponseEntity<PostResponseDTO> createPost(@Valid @RequestBody PostRequestDTO postRequestDTO,
                                                HttpServletRequest request) {
 
         log.info("Received request to create post with content: {}", postRequestDTO.getContent());
