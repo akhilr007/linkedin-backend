@@ -1,6 +1,6 @@
 package com.akhil.linkedin.post_service.controllers;
 
-import com.akhil.linkedin.post_service.dtos.responses.PostLikeResponse;
+import com.akhil.linkedin.post_service.dtos.responses.PostLikeResponseDTO;
 import com.akhil.linkedin.post_service.services.PostLikeService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +20,9 @@ public class PostLikeController {
     private final PostLikeService postLikeService;
 
     @PostMapping("/{postId}")
-    public ResponseEntity<PostLikeResponse> likePost(@PathVariable Long postId, HttpServletRequest request) {
+    public ResponseEntity<PostLikeResponseDTO> likePost(@PathVariable Long postId, HttpServletRequest request) {
         log.info("Received request to like post with ID: {} by user with ID: {}", postId, 1L);
-        PostLikeResponse response = postLikeService.likePost(postId, 1L);
+        PostLikeResponseDTO response = postLikeService.likePost(postId, 1L);
 
         log.info("Post liked successfully with ID: {} by user with ID: {}", postId, 1L);
         return ResponseEntity.ok(response);

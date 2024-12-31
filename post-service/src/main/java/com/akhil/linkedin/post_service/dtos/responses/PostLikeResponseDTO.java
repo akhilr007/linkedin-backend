@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class PostLikeResponse {
+public class PostLikeResponseDTO {
 
     private Boolean success = false;
     private String message;

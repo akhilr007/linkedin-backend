@@ -1,6 +1,6 @@
 package com.akhil.linkedin.post_service.services.impl;
 
-import com.akhil.linkedin.post_service.dtos.responses.PostLikeResponse;
+import com.akhil.linkedin.post_service.dtos.responses.PostLikeResponseDTO;
 import com.akhil.linkedin.post_service.entitiies.PostLike;
 import com.akhil.linkedin.post_service.exceptions.ResourceNotFoundException;
 import com.akhil.linkedin.post_service.repositories.PostLikeRepository;
@@ -19,7 +19,7 @@ public class PostLikeServiceImpl implements PostLikeService {
     private final PostRepository postRepository;
 
     @Override
-    public PostLikeResponse likePost(Long postId, Long userId) {
+    public PostLikeResponseDTO likePost(Long postId, Long userId) {
 
         log.info("Starting to like post with ID: {} by user ID: {}", postId, userId);
 
@@ -40,7 +40,7 @@ public class PostLikeServiceImpl implements PostLikeService {
         postLikeRepository.save(postLike);
         log.info("Post liked successfully with ID: {} by user ID: {}", postId, userId);
 
-        return PostLikeResponse.builder()
+        return PostLikeResponseDTO.builder()
                 .success(true)
                 .message("Post liked successfully")
                 .build();
