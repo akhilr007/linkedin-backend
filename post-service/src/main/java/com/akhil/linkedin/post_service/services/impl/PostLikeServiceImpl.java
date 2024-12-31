@@ -47,7 +47,25 @@ public class PostLikeServiceImpl implements PostLikeService {
     }
 
     @Override
-    public void unlikePost(Long postId, Long userId) {
+    public PostLikeResponseDTO unlikePost(Long postId, Long userId) {
+        log.info("Starting to unlike post with ID: {} by user ID: {}", postId, userId);
 
+        if(postRepository.findById(postId).isEmpty()) {
+            log.error("Post not found with ID: {}", postId);
+            throw new ResourceNotFoundException("Post not found with id: " + postId);
+        }
+
+        PostLike postLike = postLikeRepository.findByPostIdAndUserId(postId, userId).orElseThrow(() -> {
+                log.error("Post is not liked by the user ID: {}", userId);
+                return new IllegalArgumentException("Post is not liked by the user with ID: " + userId);
+        });
+
+        postLikeRepository.delete(postLike);
+        log.info("Post unliked successfully with ID: {} by user ID: {}", postId, userId);
+
+        return PostLikeResponseDTO.builder()
+                .success(true)
+                .message("Post unliked successfully")
+                .build();
     }
 }

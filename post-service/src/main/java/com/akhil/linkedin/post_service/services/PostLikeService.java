@@ -6,5 +6,5 @@ public interface PostLikeService {
 
     PostLikeResponseDTO likePost(Long postId, Long userId);
 
-    void unlikePost(Long postId, Long userId);
+    PostLikeResponseDTO unlikePost(Long postId, Long userId);
 }
