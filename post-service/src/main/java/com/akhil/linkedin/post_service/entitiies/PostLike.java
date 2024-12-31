@@ -1,8 +1,7 @@
 package com.akhil.linkedin.post_service.entitiies;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -11,6 +10,9 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Table(name = "post_likes")
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class PostLike {
 
     @Id
