@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/posts")
@@ -37,5 +39,15 @@ public class PostController {
 
         log.info("Returning post with ID: {}", postId);
         return ResponseEntity.ok(responseDTO);
+    }
+
+    @GetMapping("/users/{userId}/all")
+    ResponseEntity<List<PostResponseDTO>> getAllPostsOfUser(@PathVariable Long userId) {
+
+        log.info("Received request to get all posts of user with ID: {}", userId);
+        List<PostResponseDTO> responseDTOs = postService.getAllPostsOfUser(userId);
+
+        log.info("Returning all posts of user with ID: {}", userId);
+        return ResponseEntity.ok(responseDTOs);
     }
 }

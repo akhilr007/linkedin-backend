@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -52,5 +54,21 @@ public class PostServiceImpl implements PostService {
 
         log.info("Returning response DTO with ID: {}", responseDTO.getId());
         return responseDTO;
+    }
+
+    @Override
+    public List<PostResponseDTO> getAllPostsOfUser(Long userId) {
+        log.info("Starting to get all posts of user with ID: {}", userId);
+
+        List<Post> posts = postRepository.findByUserId(userId);
+        log.debug("Found posts: {}", posts);
+
+        List<PostResponseDTO> responseDTOs = posts.stream()
+                .map(post -> modelMapper.map(post, PostResponseDTO.class))
+                .toList();
+        log.debug("Mapped Post entities to PostResponseDTOs: {}", responseDTOs);
+
+        log.info("Returning response DTOs of user with ID: {}", userId);
+        return responseDTOs;
     }
 }
