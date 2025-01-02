@@ -2,6 +2,7 @@ package com.akhil.linkedin.user_service.advices;
 
 import com.akhil.linkedin.user_service.advices.ApiResponse;
 import com.akhil.linkedin.user_service.exceptions.EmailAlreadyInUseException;
+import com.akhil.linkedin.user_service.exceptions.InvalidCredentialsException;
 import com.akhil.linkedin.user_service.exceptions.ResourceNotFoundException;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<?>> handleResourceNotFound(ResourceNotFoundException exception){
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.NOT_FOUND)
+                .message(exception.getMessage())
+                .build();
+        return buildErrorResponseEntity(apiError);
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiResponse<?>> handleInvalidCredentialsException(InvalidCredentialsException exception){
+        ApiError apiError = ApiError.builder()
+                .status(HttpStatus.UNAUTHORIZED)
                 .message(exception.getMessage())
                 .build();
         return buildErrorResponseEntity(apiError);

@@ -1,6 +1,8 @@
 package com.akhil.linkedin.user_service.controllers;
 
+import com.akhil.linkedin.user_service.dto.request.LoginRequestDTO;
 import com.akhil.linkedin.user_service.dto.request.SignupRequestDTO;
+import com.akhil.linkedin.user_service.dto.response.LoginResponseDTO;
 import com.akhil.linkedin.user_service.dto.response.SignupResponseDTO;
 import com.akhil.linkedin.user_service.services.AuthService;
 import jakarta.validation.Valid;
@@ -28,5 +30,14 @@ public class AuthController {
 
         log.info("Signup response sent: {}", response);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO loginRequestDTO) {
+        log.info("Login request received: {}", loginRequestDTO);
+        LoginResponseDTO response = authService.login(loginRequestDTO);
+
+        log.info("Login response sent: {}", response);
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }
