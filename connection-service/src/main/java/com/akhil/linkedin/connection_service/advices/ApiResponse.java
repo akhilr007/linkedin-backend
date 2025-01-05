@@ -1,6 +1,5 @@
 package com.akhil.linkedin.connection_service.advices;
 
-import com.akhil.linkedin.post_service.advices.ApiError;
 import lombok.Data;
 
 import java.time.LocalDateTime;
