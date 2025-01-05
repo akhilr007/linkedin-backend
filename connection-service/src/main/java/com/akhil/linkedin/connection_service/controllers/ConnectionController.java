@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@RestController("/core")
+@RestController
 @RequiredArgsConstructor
 @Slf4j
 public class ConnectionController {
