@@ -16,13 +16,14 @@ spring:
             - Path=/api/v1/posts/**
           filters:
             - StripPrefix=2
+            - name: AuthenticationFilter
 
         - id: user-service
           uri: lb://USER-SERVICE
           predicates:
             - Path=/api/v1/users/**
           filters:
-              - StripPrefix=2
+            - StripPrefix=2
 
         - id: connection-service
           uri: lb://CONNECTION-SERVICE
@@ -30,6 +31,11 @@ spring:
             - Path=/api/v1/connections/**
           filters:
             - StripPrefix=2
+            - name: AuthenticationFilter
 
   application:
     name: api-gateway
+
+  jwt:
+    secret:
+      key: ${spring.jwt.secret.key}
