@@ -27,7 +27,7 @@ public class PostServiceImpl implements PostService {
 
         Post post = modelMapper.map(postRequestDTO, Post.class);
         post.setContent(postRequestDTO.getContent().trim());
-        post.setUserId(1L); //TODO - set the user ID from the request
+        post.setUserId(userId); //TODO - set the user ID from the request
 
         log.debug("Mapped PostRequestDTO to Post entity: {}", post);
 

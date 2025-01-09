@@ -1,5 +1,6 @@
 package com.akhil.linkedin.post_service.controllers;
 
+import com.akhil.linkedin.post_service.auth.UserContextHolder;
 import com.akhil.linkedin.post_service.dtos.requests.PostRequestDTO;
 import com.akhil.linkedin.post_service.dtos.responses.PostResponseDTO;
 import com.akhil.linkedin.post_service.services.PostService;
@@ -21,11 +22,13 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping
-    ResponseEntity<PostResponseDTO> createPost(@Valid @RequestBody PostRequestDTO postRequestDTO,
-                                               HttpServletRequest request) {
-
+    ResponseEntity<PostResponseDTO> createPost(@Valid @RequestBody PostRequestDTO postRequestDTO) {
         log.info("Received request to create post with content: {}", postRequestDTO.getContent());
-        PostResponseDTO responseDTO = postService.createPost(postRequestDTO, 1L);
+
+        Long userId = UserContextHolder.getCurrentUserId();
+        log.info("User ID: {}", userId);
+
+        PostResponseDTO responseDTO = postService.createPost(postRequestDTO, userId);
 
         log.info("Post created successfully with ID: {}", responseDTO.getId());
         return ResponseEntity.ok(responseDTO);
