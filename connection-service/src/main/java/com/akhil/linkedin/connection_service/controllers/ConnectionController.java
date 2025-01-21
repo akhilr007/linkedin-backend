@@ -39,19 +39,33 @@ public class ConnectionController {
         return ResponseEntity.ok(connections);
     }
 
-    @PostMapping("/{userId1}/connect/{userId2}")
-    public ResponseEntity<Void> connectUsers(@PathVariable Long userId1, @PathVariable Long userId2) {
-        connectionService.connectUsers(userId1, userId2);
-        return ResponseEntity.ok().build();
+    @PostMapping("/send/{receiverId}")
+    ResponseEntity<Boolean> sendConnectionRequest(@PathVariable Long receiverId) {
+        Long senderId = UserContextHolder.getCurrentUserId();
+        log.info("Received connection request from senderId: {} for receiverId: {}", senderId, receiverId);
+
+        boolean response = connectionService.sendConnectionRequest(senderId, receiverId);
+
+        return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/create-user")
-    public ResponseEntity<Connection> createUser(@RequestBody Connection connection) {
-        Connection created = connectionService.createUser(
-                connection.getUserId(),
-                connection.getName(),
-                connection.getEmail()
-        );
-        return ResponseEntity.ok(created);
+    @PostMapping("/accept/{senderId}")
+    ResponseEntity<Boolean> acceptConnectionRequest(@PathVariable Long senderId) {
+        Long receiverId = UserContextHolder.getCurrentUserId();
+        log.info("Received connection accept request from senderId: {} for receiverId: {}", senderId, receiverId);
+
+        boolean response = connectionService.acceptConnectionRequest(senderId, receiverId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reject/{senderId}")
+    ResponseEntity<Boolean> rejectConnectionRequest(@PathVariable Long senderId) {
+        Long receiverId = UserContextHolder.getCurrentUserId();
+        log.info("Received rejection connection request from senderId: {} for receiverId: {}", senderId, receiverId);
+
+        boolean response = connectionService.rejectConnectionRequest(senderId, receiverId);
+
+        return ResponseEntity.ok(response);
     }
 }

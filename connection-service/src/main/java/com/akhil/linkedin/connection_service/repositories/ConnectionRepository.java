@@ -25,19 +25,35 @@ public interface ConnectionRepository extends Neo4jRepository<Connection, Long> 
             "RETURN DISTINCT connection")
     List<Connection> findSecondDegreeConnections(@Param("userId") Long userId);
 
-    // Create connection between two users - optimized query
-    @Query("""
-            MATCH (a:Connection {userId: $userId1})
-            WITH a
-            MATCH (b:Connection {userId: $userId2})
-            WHERE a <> b
-            MERGE (a)-[:CONNECTED_TO]->(b)
-            """)
-    void createConnection(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
 
-    // Check if two users are connected
-    @Query("RETURN EXISTS( " +
-            "(:Connection {userId: $userId1})-[:CONNECTED_TO]->(:Connection {userId: $userId2}) " +
-            ")")
-    boolean areUsersConnected(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
+    @Query("MATCH (sender:Connection)-[r:REQUESTED_TO]->(receiver:Connection) " +
+            "WHERE sender.userId=$senderId AND receiver.userId=$receiverId " +
+            " RETURN COUNT(r) > 0")
+    boolean connectionRequestExists(Long senderId, Long receiverId);
+
+    @Query("MATCH (sender:Connection)-[r:REQUESTED_TO]-(receiver:Connection) " +
+            "WHERE sender.userId=$senderId AND receiver.userId=$receiverId " +
+            " RETURN COUNT(r) > 0")
+    boolean alreadyConnected(Long senderId, Long receiverId);
+
+    @Query("MATCH (sender:Connection), (receiver:Connection) " +
+            "WHERE sender.userId=$senderId AND receiver.userId=$receiverId " +
+            " CREATE (sender)-[:REQUESTED_TO]->(receiver)")
+    void addConnectionRequest(Long senderId, Long receiverId);
+
+
+    @Query("MATCH (sender:Connection)-[r:REQUESTED_TO]->(receiver:Connection) " +
+            "WHERE sender.userId=$senderId AND receiver.userId=$receiverId " +
+            "DELETE r " +
+            "CREATE (sender)-[:CONNECTED_TO]->(receiver), (receiver)-[:CONNECTED_TO]->(sender)")
+    void acceptConnectionRequest(Long senderId, Long receiverId);
+
+    @Query("MATCH (sender:Connection)-[r:REQUESTED_TO]->(receiver:Connection) " +
+            "WHERE sender.userId=$senderId AND receiver.userId=$receiverId " +
+            "DELETE r ")
+    void rejectConnectionRequest(Long senderId, Long receiverId);
+
+    @Query("MERGE (user:Connection {userId: $userId, name: $name, email: $email})")
+    void createUserNode(Long userId, String name, String email);
+
 }

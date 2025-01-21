@@ -2,10 +2,13 @@ package com.akhil.linkedin.connection_service.services.impl;
 
 import com.akhil.linkedin.connection_service.entities.Connection;
 import com.akhil.linkedin.connection_service.exceptions.ResourceNotFoundException;
+import com.akhil.linkedin.connection_service.kafka.events.AcceptConnectionRequestEvent;
+import com.akhil.linkedin.connection_service.kafka.events.SendConnectionRequestEvent;
 import com.akhil.linkedin.connection_service.repositories.ConnectionRepository;
 import com.akhil.linkedin.connection_service.services.ConnectionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,6 +19,8 @@ import java.util.List;
 public class ConnectionServiceImpl implements ConnectionService {
 
     private final ConnectionRepository connectionRepository;
+    private final KafkaTemplate<Long, SendConnectionRequestEvent> sendConnectionRequestTemplate;
+    private final KafkaTemplate<Long, AcceptConnectionRequestEvent> acceptConnectionRequestTemplate;
 
     @Override
     public List<Connection> findFirstDegreeConnections(Long userId) {
@@ -48,41 +53,70 @@ public class ConnectionServiceImpl implements ConnectionService {
     }
 
     @Override
-    public void connectUsers(Long userId1, Long userId2) {
-        log.info("Connecting users: {} and {}", userId1, userId2);
+    public boolean sendConnectionRequest(Long senderId, Long receiverId) {
+        log.info("Sending connection request from senderId: {} to receiverId: {}", senderId, receiverId);
 
-        // Validate that both users exist
-        connectionRepository.findByUserId(userId1)
-                .orElseThrow(() -> new ResourceNotFoundException("User " + userId1 + " not found"));
-        connectionRepository.findByUserId(userId2)
-                .orElseThrow(() -> new ResourceNotFoundException("User " + userId2 + " not found"));
-
-
-        // Don't allow self-connections
-        if (userId1.equals(userId2)) {
-            throw new IllegalArgumentException("Users cannot connect to themselves");
+        if(senderId.equals(receiverId)) {
+            throw new RuntimeException("Both sender and receiver are same");
         }
 
-        if (!connectionRepository.areUsersConnected(userId1, userId2)) {
-            connectionRepository.createConnection(userId1, userId2);
-            log.info("Created connection from userId: {} to userId: {}", userId1, userId2);
+        boolean alreadySentRequest = connectionRepository.connectionRequestExists(senderId, receiverId);
+        if(alreadySentRequest) {
+            throw new RuntimeException("Connection request already sent, cannot send again");
+        }
 
-            // Create reverse connection for undirected graph
-            log.info("Creating reverse connection from userId: {} to userId: {}", userId2, userId1);
-            connectionRepository.createConnection(userId2, userId1);
+        boolean alreadyConnected = connectionRepository.alreadyConnected(senderId, receiverId);
+        if(alreadyConnected) {
+            throw new RuntimeException("Already connected users, cannot add connection request");
         }
-        else {
-            log.info("Users: {} and {} are already connected", userId1, userId2);
-        }
+
+        log.info("Successfully sent the connection request");
+        connectionRepository.addConnectionRequest(senderId, receiverId);
+
+        SendConnectionRequestEvent  sendConnectionRequestEvent = SendConnectionRequestEvent
+                .builder()
+                .receiverId(receiverId)
+                .senderId(senderId)
+                .build();
+
+        sendConnectionRequestTemplate.send("send-connection-request-topic", sendConnectionRequestEvent);
+        log.info("Successfully send the send notification request to receiverId {}, from senderId {}", receiverId, senderId);
+        return true;
     }
 
-    public Connection createUser(Long userId, String name, String email) {
+    @Override
+    public boolean acceptConnectionRequest(Long senderId, Long receiverId) {
+        log.info("Accepting connection request from senderId: {} to receiverId: {}", senderId, receiverId);
 
-        Connection connection = Connection.builder()
-                .userId(userId)
-                .name(name)
-                .email(email)
+        boolean connectionRequestExists = connectionRepository.connectionRequestExists(senderId, receiverId);
+        if(!connectionRequestExists) {
+            throw new RuntimeException("Connection request doest not exists to accept");
+        }
+
+        connectionRepository.acceptConnectionRequest(senderId, receiverId);
+
+        AcceptConnectionRequestEvent acceptConnectionRequestEvent = AcceptConnectionRequestEvent
+                .builder()
+                .receiverId(receiverId)
+                .senderId(senderId)
                 .build();
-        return connectionRepository.save(connection);
+        acceptConnectionRequestTemplate.send("accept-connection-request-topic", acceptConnectionRequestEvent);
+        log.info("Successfully accepted the connection request by receiverId {}, from senderId {}", receiverId, senderId);
+        return true;
+    }
+
+    @Override
+    public boolean rejectConnectionRequest(Long senderId, Long receiverId) {
+        log.info("Rejecting connection request from senderId: {} to receiverId: {}", senderId, receiverId);
+
+        boolean connectionRequestExists = connectionRepository.connectionRequestExists(senderId, receiverId);
+        if(!connectionRequestExists) {
+            throw new RuntimeException("Connection request doest not exists to reject");
+        }
+
+        connectionRepository.rejectConnectionRequest(senderId, receiverId);
+
+        log.info("Successfully rejected the connection request from senderId");
+        return true;
     }
 }

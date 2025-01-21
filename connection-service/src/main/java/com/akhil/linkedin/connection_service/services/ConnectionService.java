@@ -10,7 +10,9 @@ public interface ConnectionService {
 
     List<Connection> findSecondDegreeConnections(Long userId);
 
-    void connectUsers(Long userId1, Long userId2);
+    boolean sendConnectionRequest(Long senderId, Long receiverId);
 
-    Connection createUser(Long userId, String name, String email);
+    boolean acceptConnectionRequest(Long senderId, Long receiverId);
+
+    boolean rejectConnectionRequest(Long senderId, Long receiverId);
 }
