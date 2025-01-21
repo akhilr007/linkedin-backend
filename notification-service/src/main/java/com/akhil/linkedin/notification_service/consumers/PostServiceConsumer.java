@@ -2,8 +2,7 @@ package com.akhil.linkedin.notification_service.consumers;
 
 import com.akhil.linkedin.notification_service.clients.ConnectionFeignClient;
 import com.akhil.linkedin.notification_service.dtos.response.ConnectionResponse;
-import com.akhil.linkedin.notification_service.entities.Notification;
-import com.akhil.linkedin.notification_service.repositories.NotificationRepository;
+import com.akhil.linkedin.notification_service.services.NotificationService;
 import com.akhil.linkedin.post_service.events.PostCreatedEvent;
 import com.akhil.linkedin.post_service.events.PostLikedEvent;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +16,7 @@ import org.springframework.stereotype.Service;
 public class PostServiceConsumer {
 
     private final ConnectionFeignClient connectionFeignClient;
-    private final NotificationRepository notificationRepository;
+    private final NotificationService notificationService;
 
     @KafkaListener(topics = "post-created-topic")
     public void handlePostCreated(PostCreatedEvent postCreatedEvent) {
@@ -31,7 +30,7 @@ public class PostServiceConsumer {
         }
 
         for(ConnectionResponse.Connection connection: firstDegreeConnections.getData()) {
-            sendNotification(connection.getUserId(),
+            notificationService.send(connection.getUserId(),
                     "Your connection " + connection.getName() + " created a post");
         }
     }
@@ -43,18 +42,8 @@ public class PostServiceConsumer {
         String message = String.format("Your post, %d has been liked by %d", postLikedEvent.getPostId(),
                 postLikedEvent.getLikedByUserId());
 
-        sendNotification(postLikedEvent.getCreatorId(), message);
+            notificationService.send(postLikedEvent.getCreatorId(), message);
     }
 
-    public void sendNotification(Long userId, String message) {
-        log.info("Sending Notification to UserId: {}", userId);
 
-        Notification notification = new Notification();
-        notification.setUserId(userId);
-        notification.setMessage(message);
-
-        log.info("Notification successfully saved in DB for {}", userId);
-        notificationRepository.save(notification);
-
-    }
 }
