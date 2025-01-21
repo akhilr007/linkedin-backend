@@ -8,6 +8,7 @@ import com.akhil.linkedin.user_service.entities.User;
 import com.akhil.linkedin.user_service.exceptions.EmailAlreadyInUseException;
 import com.akhil.linkedin.user_service.exceptions.InvalidCredentialsException;
 import com.akhil.linkedin.user_service.exceptions.ResourceNotFoundException;
+import com.akhil.linkedin.user_service.kafka.events.UserSignupEvent;
 import com.akhil.linkedin.user_service.repositories.UserRepository;
 import com.akhil.linkedin.user_service.services.AuthService;
 import com.akhil.linkedin.user_service.utils.JwtUtil;
@@ -15,6 +16,7 @@ import com.akhil.linkedin.user_service.utils.PasswordUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -25,6 +27,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final ModelMapper modelMapper;
     private final JwtUtil jwtUtil;
+    private final KafkaTemplate<Long, UserSignupEvent> userSignupEventKafkaTemplate;
 
     @Override
     public SignupResponseDTO signup(SignupRequestDTO signupRequestDTO) {
@@ -42,7 +45,17 @@ public class AuthServiceImpl implements AuthService {
         user.setPassword(PasswordUtil.encode(signupRequestDTO.getPassword()));
 
         // Save user to DB
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        UserSignupEvent userSignupEvent = UserSignupEvent
+                .builder()
+                .email(savedUser.getEmail())
+                .userId(savedUser.getId())
+                .name(savedUser.getName())
+                .build();
+
+        userSignupEventKafkaTemplate.send("user-signup-topic", userSignupEvent);
+        log.info("User signup topic published for user-signup-topic: {}", userSignupEvent);
 
         SignupResponseDTO response =  SignupResponseDTO.builder()
                 .success(true)
