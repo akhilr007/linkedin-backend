@@ -1,0 +1,241 @@
+version: "3.8"
+
+services:
+  kafka:
+    image: bitnami/kafka:3.8.0
+    container_name: kafka
+    networks:
+      - linkedin-network
+    ports:
+      - "9092:9092"
+      - "9093:9093"  # External listener
+      - "29092:29092" # Controller port
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:29092
+      KAFKA_KRAFT_CLUSTER_ID: "${CLUSTER_ID}"
+      KAFKA_CFG_LISTENERS: CONTROLLER://:29092,PLAINTEXT://:9092,EXTERNAL://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9093
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/bitnami/kafka/data
+    healthcheck:
+      test: [ "CMD", "kafka-topics.sh", "--bootstrap-server", "kafka:9092", "--list" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    command: |
+      bash -c "
+      if [ ! -f /bitnami/kafka/data/meta.properties ]; then
+        /opt/bitnami/kafka/bin/kafka-storage.sh format \
+          --config /opt/bitnami/kafka/config/kraft/server.properties \
+          --cluster-id $$KAFKA_KRAFT_CLUSTER_ID \
+          --ignore-formatted;
+      fi && \
+      /opt/bitnami/scripts/kafka/run.sh
+      "
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: PLAINTEXT
+    depends_on:
+      kafka:
+        condition: service_healthy
+    extra_hosts:
+      - "kafka:host-gateway"
+    networks:
+      - linkedin-network
+
+  discovery-server:
+    image: rajanakhil/linkedin-backend/discovery-server
+    container_name: discovery-server
+    networks:
+      - linkedin-network
+    ports:
+      - "8761:8761"
+
+  notification-db:
+    image: mysql:8.0
+    container_name: notification-db
+    environment:
+      - MYSQL_DATABASE=NOTIFICATION_DB_DEV
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+    networks:
+      - linkedin-network
+    ports:
+      - "3307:3306"
+    volumes:
+      - notification_db_data:/var/lib/mysql
+
+  post-db:
+    image: mysql:8.0
+    container_name: post-db
+    environment:
+      - MYSQL_DATABASE=POSTS_DB_DEV
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+    networks:
+      - linkedin-network
+    volumes:
+      - post_db_data:/var/lib/mysql
+    ports:
+      - "3308:3306"
+
+  user-db:
+    image: mysql:8.0
+    container_name: user-db
+    environment:
+      - MYSQL_DATABASE=USERS_LINKEDIN_DB_DEV
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+    networks:
+      - linkedin-network
+    volumes:
+      - user_db_data:/var/lib/mysql
+    ports:
+      - "3309:3306"
+
+  connection-db:
+    image: neo4j
+    container_name: connection-db
+    environment:
+      - NEO4J_AUTH=neo4j/${DB_PASSWORD}
+    ports:
+      - "7474:7474" # HTTP port
+      - "7687:7687" # BOLT port
+    volumes:
+      - connection-db-data:/data
+    networks:
+      - linkedin-network
+
+  notification-service:
+    image: rajanakhil/linkedin-backend/notification-service
+    container_name: notification-service
+    networks:
+      - linkedin-network
+    depends_on:
+      - kafka
+      - notification-db
+      - discovery-server
+    environment:
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_FLYWAY_USER=root
+      - SPRING_FLYWAY_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "9040:9040"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  user-service:
+    image: rajanakhil/linkedin-backend/user-service
+    container_name: user-service
+    networks:
+      - linkedin-network
+    environment:
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_FLYWAY_USER=root
+      - SPRING_FLYWAY_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    depends_on:
+      - kafka
+      - user-db
+      - discovery-server
+    ports:
+      - "9020:9020"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  post-service:
+    image: rajanakhil/linkedin-backend/post-service
+    container_name: post-service
+    networks:
+      - linkedin-network
+    environment:
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_FLYWAY_USER=root
+      - SPRING_FLYWAY_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "9010:9010"
+    depends_on:
+      - kafka
+      - post-db
+      - discovery-server
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  connection-service:
+    image: rajanakhil/linkedin-backend/connection-service
+    container_name: connection-service
+    networks:
+      - linkedin-network
+    depends_on:
+      - kafka
+      - connection-db
+      - discovery-server
+    ports:
+      - "9030:9030"
+    environment:
+      - SPRING_NEO4J_URI=bolt://connection-db:7687
+      - SPRING_NEO4J_AUTHENTICATION_USERNAME=neo4j
+      - SPRING_NEO4J_AUTHENTICATION_PASSWORD=${DB_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  api-gateway:
+    image: rajanakhil/linkedin-backend/api-gateway
+    container_name: api-gateway
+    networks:
+      - linkedin-network
+    depends_on:
+      - user-service
+      - post-service
+      - connection-service
+      - discovery-server
+    environment:
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    ports:
+      - "8080:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+volumes:
+  kafka-data:
+  notification_db_data:
+  post_db_data:
+  user_db_data:
+  connection-db-data:
+
+networks:
+  linkedin-network:
+    driver: bridge
+    attachable: true
+#    ipam:
+#      config:
+#        - subnet: 172.28.0.0/16
